@@ -25,11 +25,62 @@
 #include "WiFiClient.h"
 #include "include/ssl.h"
 
+class LazySSLCtx {
+public:
+    LazySSLCtx();
+    virtual ~LazySSLCtx();
+
+    bool take();
+    void release();
+
+    inline
+    bool loadPrivateKey(const uint8_t* data, size_t size) {
+        return loadObject(SSL_OBJ_RSA_KEY, data, size);
+    }
+
+    inline
+    bool loadPrivateKey(Stream& stream, size_t size) {
+        return loadObject(SSL_OBJ_RSA_KEY, stream, size);
+    }
+
+    inline
+    bool loadCertificate(const uint8_t* data, size_t size) {
+        return loadObject(SSL_OBJ_X509_CERT, data, size);
+    }
+
+    inline
+    bool loadCertificate(Stream& stream, size_t size) {
+        return loadObject(SSL_OBJ_X509_CERT, stream, size);
+    }
+
+    inline
+    bool loadCaCertificate(const uint8_t* data, size_t size) {
+        return loadObject(SSL_OBJ_X509_CACERT, data, size);
+    }
+
+    inline
+    bool loadCaCertificate(Stream& stream, size_t size) {
+        return loadObject(SSL_OBJ_X509_CACERT, stream, size);
+    }
+
+    bool loadObject(int type, Stream& stream, size_t size);
+    bool loadObject(int type, const uint8_t* data, size_t size);
+
+    operator SSL_CTX*();
+
+private:
+    bool active = false;
+
+    // Shared between all instances
+    static SSL_CTX* _ssl_ctx;
+    static unsigned int _count;
+};
 
 class SSLContext;
 
 class WiFiClientSecure : public WiFiClient {
 public:
+  WiFiClientSecure(const LazySSLCtx &sslCtx);
   WiFiClientSecure();
   ~WiFiClientSecure() override;
   WiFiClientSecure(const WiFiClientSecure&);
@@ -50,11 +101,18 @@ public:
   size_t peekBytes(uint8_t *buffer, size_t length) override;
   void stop() override;
 
-  void setCertificate(const uint8_t* cert_data, size_t size);
-  void setPrivateKey(const uint8_t* pk, size_t size);
+  __attribute__((deprecated))
+  bool setCertificate(const uint8_t* cert_data, size_t size);
+  __attribute__((deprecated))
+  bool setPrivateKey(const uint8_t* pk, size_t size);
+  __attribute__((deprecated))
+  bool setCACert(const uint8_t* ca, size_t size);
 
+  __attribute__((deprecated))
   bool loadCertificate(Stream& stream, size_t size);
+  __attribute__((deprecated))
   bool loadPrivateKey(Stream& stream, size_t size);
+  __attribute__((deprecated))
   bool loadCACert(Stream& stream, size_t size);
 
   template<typename TFile>
@@ -67,11 +125,14 @@ public:
     return loadPrivateKey(file, file.size());
   }
 
+    SSLContext* getSslContext();
+    SSL* getSsl();
 protected:
     int _connectSSL(const char* hostName);
     bool _verifyDN(const char* name);
 
     SSLContext* _ssl = nullptr;
+    LazySSLCtx _sslCtx;
 };
 
 #endif //wificlientsecure_h

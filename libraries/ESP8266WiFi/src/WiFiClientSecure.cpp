@@ -45,7 +45,7 @@ extern "C"
 #endif
 
 #ifdef DEBUG_SSL
-#define SSL_DEBUG_OPTS SSL_DISPLAY_STATES
+#define SSL_DEBUG_OPTS (SSL_DISPLAY_STATES | SSL_DISPLAY_RSA)
 #else
 #define SSL_DEBUG_OPTS 0
 #endif
@@ -55,48 +55,52 @@ class SSLContext
 public:
     SSLContext()
     {
-        if (_ssl_ctx_refcnt == 0) {
-            _ssl_ctx = ssl_ctx_new(SSL_SERVER_VERIFY_LATER | SSL_DEBUG_OPTS | SSL_CONNECT_IN_PARTS | SSL_READ_BLOCKING | SSL_NO_DEFAULT_KEY, 0);
-        }
-        ++_ssl_ctx_refcnt;
+//        if (_ssl_ctx_refcnt == 0) {
+//            _ssl_ctx = ssl_ctx_new(SSL_SERVER_VERIFY_LATER | SSL_DEBUG_OPTS | SSL_CONNECT_IN_PARTS | SSL_READ_BLOCKING | SSL_NO_DEFAULT_KEY, 0);
+//        }
+//        ++_ssl_ctx_refcnt;
     }
 
     ~SSLContext()
     {
-        if (_ssl) {
-            ssl_free(_ssl);
-            _ssl = nullptr;
-        }
-
-        --_ssl_ctx_refcnt;
-        if (_ssl_ctx_refcnt == 0) {
-            ssl_ctx_free(_ssl_ctx);
-        }
-
-        s_io_ctx = nullptr;
+        stop();
+//        if (_ssl) {
+//            ssl_free(_ssl);
+//            _ssl = nullptr;
+//        }
+//
+//        --_ssl_ctx_refcnt;
+//        if (_ssl_ctx_refcnt == 0) {
+//            ssl_ctx_free(_ssl_ctx);
+//        }
+//
+//        s_io_ctx = nullptr;
     }
 
-    void ref()
-    {
-        ++_refcnt;
-    }
+//    void ref()
+//    {
+//        ++_refcnt;
+//    }
 
-    void unref()
-    {
-        if (--_refcnt == 0) {
-            delete this;
-        }
-    }
+//    void unref()
+//    {
+//        if (--_refcnt == 0) {
+//            delete this;
+//        }
+//    }
 
-    void connect(ClientContext* ctx, const char* hostName, uint32_t timeout_ms)
+    void connect(SSL_CTX *_ssl_ctx, ClientContext* ctx, const char* hostName, uint32_t timeout_ms)
     {
         s_io_ctx = ctx;
+        DEBUGV("connect: ctx=%p\n", _ssl_ctx);
         _ssl = ssl_client_new(_ssl_ctx, 0, nullptr, 0, hostName);
         uint32_t t = millis();
 
         while (millis() - t < timeout_ms && ssl_handshake_status(_ssl) != SSL_OK) {
             uint8_t* data;
             int rc = ssl_read(_ssl, &data);
+            if (rc != 0)
+                DEBUGV("connect: ss_read, ret=%d, handshake=%d\n", rc, ssl_handshake_status(_ssl));
             if (rc < SSL_OK) {
                 break;
             }
@@ -105,6 +109,11 @@ public:
 
     void stop()
     {
+        if (_ssl) {
+            ssl_free(_ssl);
+            _ssl = nullptr;
+        }
+
         s_io_ctx = nullptr;
     }
 
@@ -180,32 +189,32 @@ public:
         return cb;
     }
 
-    bool loadObject(int type, Stream& stream, size_t size)
-    {
-        std::unique_ptr<uint8_t[]> buf(new uint8_t[size]);
-        if (!buf.get()) {
-            DEBUGV("loadObject: failed to allocate memory\n");
-            return false;
-        }
-
-        size_t cb = stream.readBytes(buf.get(), size);
-        if (cb != size) {
-            DEBUGV("loadObject: reading %u bytes, got %u\n", size, cb);
-            return false;
-        }
-
-        return loadObject(type, buf.get(), size);
-    }
-
-    bool loadObject(int type, const uint8_t* data, size_t size)
-    {
-        int rc = ssl_obj_memory_load(_ssl_ctx, type, data, static_cast<int>(size), nullptr);
-        if (rc != SSL_OK) {
-            DEBUGV("loadObject: ssl_obj_memory_load returned %d\n", rc);
-            return false;
-        }
-        return true;
-    }
+//    bool loadObject(int type, Stream& stream, size_t size)
+//    {
+//        std::unique_ptr<uint8_t[]> buf(new uint8_t[size]);
+//        if (!buf.get()) {
+//            DEBUGV("loadObject: failed to allocate memory\n");
+//            return false;
+//        }
+//
+//        size_t cb = stream.readBytes(buf.get(), size);
+//        if (cb != size) {
+//            DEBUGV("loadObject: reading %u bytes, got %u\n", size, cb);
+//            return false;
+//        }
+//
+//        return loadObject(type, buf.get(), size);
+//    }
+//
+//    bool loadObject(int type, const uint8_t* data, size_t size)
+//    {
+//        int rc = ssl_obj_memory_load(_ssl_ctx, type, data, static_cast<int>(size), nullptr);
+//        DEBUGV("loadObject: ssl_obj_memory_load returned %d\n", rc);
+//        if (rc != SSL_OK) {
+//            return false;
+//        }
+//        return true;
+//    }
 
     operator SSL*()
     {
@@ -231,8 +240,7 @@ protected:
         int rc = ssl_read(_ssl, &data);
         if (rc <= 0) {
             if (rc < SSL_OK && rc != SSL_CLOSE_NOTIFY && rc != SSL_ERROR_CONN_LOST) {
-                ssl_free(_ssl);
-                _ssl = nullptr;
+                stop();
             }
             return 0;
         }
@@ -242,48 +250,136 @@ protected:
         return _available;
     }
 
-    static SSL_CTX* _ssl_ctx;
-    static int _ssl_ctx_refcnt;
+//    static SSL_CTX* _ssl_ctx;
+//    static int _ssl_ctx_refcnt;
     SSL* _ssl = nullptr;
-    int _refcnt = 0;
+//    int _refcnt = 0;
     const uint8_t* _read_ptr = nullptr;
     size_t _available = 0;
     static ClientContext* s_io_ctx;
 };
 
-SSL_CTX* SSLContext::_ssl_ctx = nullptr;
-int SSLContext::_ssl_ctx_refcnt = 0;
+// SSL_CTX* SSLContext::_ssl_ctx = nullptr;
+// int SSLContext::_ssl_ctx_refcnt = 0;
 ClientContext* SSLContext::s_io_ctx = nullptr;
 
-WiFiClientSecure::WiFiClientSecure()
+SSL_CTX* LazySSLCtx::_ssl_ctx;
+unsigned int LazySSLCtx::_count;
+
+LazySSLCtx::LazySSLCtx()
 {
+    DEBUGV("LazySSLCtx");
 }
 
-WiFiClientSecure::~WiFiClientSecure()
+LazySSLCtx::~LazySSLCtx()
 {
-    if (_ssl) {
-        _ssl->unref();
+    DEBUGV("~LazySSLCtx");
+}
+
+bool LazySSLCtx::take()
+{
+    DEBUGV("LazySSLCtx:take(), active=%d, count=%d\n", active, _count);
+    if (active) {
+        return true;
+    }
+    active = true;
+
+    if (_count == 0) {
+        _ssl_ctx = ssl_ctx_new(SSL_SERVER_VERIFY_LATER | SSL_DEBUG_OPTS | SSL_CONNECT_IN_PARTS | SSL_READ_BLOCKING | SSL_NO_DEFAULT_KEY, 0);
+        DEBUGV("LazySSLCtx: ssl_ctx_new=%p\n", _ssl_ctx);
+    }
+    _count++;
+    return true;
+}
+
+void LazySSLCtx::release()
+{
+    DEBUGV("LazySSLCtx:release(), active=%d, count=%d\n", active, _count);
+    if (!active) {
+        return;
+    }
+    active = false;
+    _count--;
+
+    if (_count == 0) {
+        DEBUGV("LazySSLCtx: ssl_ctx_free, ctx=%p\n", _ssl_ctx);
+        ssl_ctx_free(_ssl_ctx);
+        _ssl_ctx = nullptr;
     }
 }
 
+bool LazySSLCtx::loadObject(int type, const uint8_t* data, size_t size)
+{
+    if (!take()) {
+        return false;
+    }
+
+    int rc = ssl_obj_memory_load(_ssl_ctx, type, data, static_cast<int>(size), nullptr);
+    DEBUGV("loadObject: ssl_obj_memory_load returned %d, ctx=%p\n", rc, _ssl_ctx);
+    if (rc != SSL_OK) {
+        return false;
+    }
+    return true;
+}
+
+bool LazySSLCtx::loadObject(int type, Stream& stream, size_t size)
+{
+    std::unique_ptr<uint8_t[]> buf(new uint8_t[size]);
+    if (!buf.get()) {
+        DEBUGV("loadObject: failed to allocate memory\n");
+        return false;
+    }
+
+    size_t cb = stream.readBytes(buf.get(), size);
+    if (cb != size) {
+        DEBUGV("loadObject: reading %u bytes, got %u\n", size, cb);
+        return false;
+    }
+
+    return loadObject(type, buf.get(), size);
+}
+
+LazySSLCtx::operator SSL_CTX*() {
+    return _ssl_ctx;
+}
+
+WiFiClientSecure::WiFiClientSecure(const LazySSLCtx& sslCtx) : _sslCtx(sslCtx)
+{
+}
+
+/*
+WiFiClientSecure::WiFiClientSecure()
+{
+}
+*/
+
+WiFiClientSecure::~WiFiClientSecure()
+{
+    _sslCtx.release();
+}
+
+/*
 WiFiClientSecure::WiFiClientSecure(const WiFiClientSecure& other)
     : WiFiClient(static_cast<const WiFiClient&>(other))
 {
     _ssl = other._ssl;
-    if (_ssl) {
-        _ssl->ref();
-    }
+//    if (_ssl) {
+//        _ssl->ref();
+//    }
+    _sslCtx = other._sslCtx;
 }
 
 WiFiClientSecure& WiFiClientSecure::operator=(const WiFiClientSecure& rhs)
 {
     (WiFiClient&) *this = rhs;
     _ssl = rhs._ssl;
-    if (_ssl) {
-        _ssl->ref();
-    }
+//    if (_ssl) {
+//        _ssl->ref();
+//    }
+    _sslCtx = rhs._sslCtx;
     return *this;
 }
+*/
 
 int WiFiClientSecure::connect(IPAddress ip, uint16_t port)
 {
@@ -306,21 +402,40 @@ int WiFiClientSecure::connect(const char* name, uint16_t port)
     return _connectSSL(name);
 }
 
+SSLContext* WiFiClientSecure::getSslContext()
+{
+    return _ssl;
+}
+
+SSL* WiFiClientSecure::getSsl()
+{
+    if (!_ssl) {
+      return nullptr;
+    }
+    return _ssl->operator SSL*();
+}
+
 int WiFiClientSecure::_connectSSL(const char* hostName)
 {
     if (_ssl) {
-        _ssl->unref();
+//        _ssl->unref();
+        delete _ssl;
         _ssl = nullptr;
     }
 
     _ssl = new SSLContext;
-    _ssl->ref();
-    _ssl->connect(_client, hostName, 5000);
+//    _ssl->ref();
+    _sslCtx.take();
+    _ssl->connect(_sslCtx, _client, hostName, 5000);
 
     auto status = ssl_handshake_status(*_ssl);
     if (status != SSL_OK) {
-        _ssl->unref();
+        Serial.printf("SSL error: %d, msg=", status);
+        ssl_display_error(status);
+//        _ssl->unref();
+        delete _ssl;
         _ssl = nullptr;
+        _sslCtx.release();
         return 0;
     }
 
@@ -339,7 +454,8 @@ size_t WiFiClientSecure::write(const uint8_t *buf, size_t size)
     }
 
     if (rc != SSL_CLOSE_NOTIFY) {
-        _ssl->unref();
+        // _ssl->unref();
+        delete _ssl;
         _ssl = nullptr;
     }
 
@@ -547,44 +663,52 @@ bool WiFiClientSecure::verifyCertChain(const char* domain_name)
     return _verifyDN(domain_name);
 }
 
-void WiFiClientSecure::setCertificate(const uint8_t* cert_data, size_t size)
+bool WiFiClientSecure::setCertificate(const uint8_t* cert_data, size_t size)
 {
-    if (!_ssl) {
-        return;
-    }
-    _ssl->loadObject(SSL_OBJ_X509_CERT, cert_data, size);
+//    if (!_ssl) {
+//        return false;
+//    }
+    return _sslCtx.loadObject(SSL_OBJ_X509_CERT, cert_data, size);
 }
 
-void WiFiClientSecure::setPrivateKey(const uint8_t* pk, size_t size)
+bool WiFiClientSecure::setPrivateKey(const uint8_t* pk, size_t size)
 {
-    if (!_ssl) {
-        return;
-    }
-    _ssl->loadObject(SSL_OBJ_RSA_KEY, pk, size);
+//    if (!_ssl) {
+//        return false;
+//    }
+    return _sslCtx.loadObject(SSL_OBJ_RSA_KEY, pk, size);
+}
+
+bool WiFiClientSecure::setCACert(const uint8_t* ca, size_t size)
+{
+//    if (!_ssl) {
+//        return false;
+//    }
+    return _sslCtx.loadObject(SSL_OBJ_X509_CACERT, ca, size);
 }
 
 bool WiFiClientSecure::loadCACert(Stream& stream, size_t size)
 {
-    if (!_ssl) {
-        return false;
-    }
-    return _ssl->loadObject(SSL_OBJ_X509_CACERT, stream, size);
+//    if (!_ssl) {
+//        return false;
+//    }
+    return _sslCtx.loadObject(SSL_OBJ_X509_CACERT, stream, size);
 }
 
 bool WiFiClientSecure::loadCertificate(Stream& stream, size_t size)
 {
-    if (!_ssl) {
-        return false;
-    }
-    return _ssl->loadObject(SSL_OBJ_X509_CERT, stream, size);
+//    if (!_ssl) {
+//        return false;
+//    }
+    return _sslCtx.loadObject(SSL_OBJ_X509_CERT, stream, size);
 }
 
 bool WiFiClientSecure::loadPrivateKey(Stream& stream, size_t size)
 {
-    if (!_ssl) {
-        return false;
-    }
-    return _ssl->loadObject(SSL_OBJ_RSA_KEY, stream, size);
+//    if (!_ssl) {
+//        return false;
+//    }
+    return _sslCtx.loadObject(SSL_OBJ_RSA_KEY, stream, size);
 }
 
 extern "C" int __ax_port_read(int fd, uint8_t* buffer, size_t count)
