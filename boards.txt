@@ -21,8 +21,9 @@ sepio-nodemcu.upload.wait_for_upload_port=true
 sepio-nodemcu.serial.disableDTR=true
 sepio-nodemcu.serial.disableRTS=true
 
+sepio-nodemcu.build.extra_flags=-DESP8266 -DSEPIO=1
 sepio-nodemcu.build.mcu=esp8266
-sepio-nodemcu.build.f_cpu=80000000L
+sepio-nodemcu.build.f_cpu=160000000L
 sepio-nodemcu.build.board=ESP8266_NODEMCU
 sepio-nodemcu.build.core=esp8266
 sepio-nodemcu.build.variant=nodemcu
