@@ -73,6 +73,46 @@ sepio-nodemcu.menu.FlashSize.4M1M.build.spiffs_end=0x3FB000
 sepio-nodemcu.menu.FlashSize.4M1M.build.spiffs_blocksize=8192
 sepio-nodemcu.menu.FlashSize.4M1M.build.spiffs_pagesize=256
 
+sepio-nodemcu.menu.Debug.Disabled=Disabled
+sepio-nodemcu.menu.Debug.Disabled.build.debug_port=
+sepio-nodemcu.menu.Debug.Serial=Serial
+sepio-nodemcu.menu.Debug.Serial.build.debug_port=-DDEBUG_ESP_PORT=Serial
+sepio-nodemcu.menu.Debug.Serial1=Serial1
+sepio-nodemcu.menu.Debug.Serial1.build.debug_port=-DDEBUG_ESP_PORT=Serial1
+
+sepio-nodemcu.menu.DebugLevel.None____=None
+sepio-nodemcu.menu.DebugLevel.None____.build.debug_level=
+sepio-nodemcu.menu.DebugLevel.Core____=Core
+sepio-nodemcu.menu.DebugLevel.Core____.build.debug_level=-DDEBUG_ESP_CORE
+sepio-nodemcu.menu.DebugLevel.SSL_____=Core + SSL
+sepio-nodemcu.menu.DebugLevel.SSL_____.build.debug_level=-DDEBUG_ESP_CORE -DDEBUG_ESP_SSL
+sepio-nodemcu.menu.DebugLevel.SSL_MEM_=Core + SSL + TLS Mem
+sepio-nodemcu.menu.DebugLevel.SSL_MEM_.build.debug_level=-DDEBUG_ESP_CORE -DDEBUG_ESP_SSL -DDEBUG_TLS_MEM
+sepio-nodemcu.menu.DebugLevel.WiFic___=Core + WiFi
+sepio-nodemcu.menu.DebugLevel.WiFic___.build.debug_level=-DDEBUG_ESP_CORE -DDEBUG_ESP_WIFI
+sepio-nodemcu.menu.DebugLevel.WiFi____=WiFi
+sepio-nodemcu.menu.DebugLevel.WiFi____.build.debug_level=-DDEBUG_ESP_WIFI
+sepio-nodemcu.menu.DebugLevel.HTTPClient=HTTPClient
+sepio-nodemcu.menu.DebugLevel.HTTPClient.build.debug_level=-DDEBUG_ESP_HTTP_CLIENT
+sepio-nodemcu.menu.DebugLevel.HTTPClient2=HTTPClient + SSL
+sepio-nodemcu.menu.DebugLevel.HTTPClient2.build.debug_level=-DDEBUG_ESP_HTTP_CLIENT -DDEBUG_ESP_SSL
+sepio-nodemcu.menu.DebugLevel.HTTPUpdate=HTTPUpdate
+sepio-nodemcu.menu.DebugLevel.HTTPUpdate.build.debug_level=-DDEBUG_ESP_HTTP_UPDATE
+sepio-nodemcu.menu.DebugLevel.HTTPUpdate2=HTTPClient + HTTPUpdate
+sepio-nodemcu.menu.DebugLevel.HTTPUpdate2.build.debug_level=-DDEBUG_ESP_HTTP_UPDATE -DDEBUG_ESP_HTTP_UPDATE
+sepio-nodemcu.menu.DebugLevel.HTTPUpdate3=HTTPClient + HTTPUpdate + Updater
+sepio-nodemcu.menu.DebugLevel.HTTPUpdate3.build.debug_level=-DDEBUG_ESP_HTTP_UPDATE -DDEBUG_ESP_HTTP_UPDATE -DDEBUG_ESP_UPDATER
+sepio-nodemcu.menu.DebugLevel.HTTPServer=HTTPServer
+sepio-nodemcu.menu.DebugLevel.HTTPServer.build.debug_level=-DDEBUG_ESP_HTTP_SERVER
+sepio-nodemcu.menu.DebugLevel.UPDATER=Updater
+sepio-nodemcu.menu.DebugLevel.UPDATER.build.debug_level=-DDEBUG_ESP_UPDATER
+sepio-nodemcu.menu.DebugLevel.OTA_____=OTA
+sepio-nodemcu.menu.DebugLevel.OTA_____.build.debug_level=-DDEBUG_ESP_OTA
+sepio-nodemcu.menu.DebugLevel.OTA2____=OTA + Updater
+sepio-nodemcu.menu.DebugLevel.OTA2____.build.debug_level=-DDEBUG_ESP_OTA -DDEBUG_ESP_UPDATER
+sepio-nodemcu.menu.DebugLevel.all_____=All
+sepio-nodemcu.menu.DebugLevel.all_____.build.debug_level=-DDEBUG_ESP_CORE -DDEBUG_ESP_SSL -DDEBUG_ESP_WIFI -DDEBUG_ESP_HTTP_CLIENT -DDEBUG_ESP_HTTP_UPDATE -DDEBUG_ESP_HTTP_SERVER -DDEBUG_ESP_UPDATER -DDEBUG_ESP_OTA -DDEBUG_TLS_MEM
+
 ##############################################################
 generic.name=Generic ESP8266 Module
 
