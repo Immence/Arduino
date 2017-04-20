@@ -99,8 +99,9 @@ public:
         while (millis() - t < timeout_ms && ssl_handshake_status(_ssl) != SSL_OK) {
             uint8_t* data;
             int rc = ssl_read(_ssl, &data);
-            if (rc != 0)
+            if (rc != 0) {
                 DEBUGV("connect: ss_read, ret=%d, handshake=%d\n", rc, ssl_handshake_status(_ssl));
+			}
             if (rc < SSL_OK) {
                 break;
             }
@@ -714,7 +715,7 @@ bool WiFiClientSecure::loadPrivateKey(Stream& stream, size_t size)
 extern "C" int __ax_port_read(int fd, uint8_t* buffer, size_t count)
 {
     ClientContext* _client = SSLContext::getIOContext(fd);
-    if (!_client || _client->state() != ESTABLISHED && !_client->getSize()) {
+    if (!_client || (_client->state() != ESTABLISHED && !_client->getSize())) {
         errno = EIO;
         return -1;
     }
